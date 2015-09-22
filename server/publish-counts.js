@@ -76,13 +76,33 @@ Counts.publish = function(self, name, cursor, options) {
   }
 
   if (!countFn) {
-    self.added('counts', name, {count: cursor.count()});
+    var count = 0;
+    if (Array.isArray(cursor)) {
+      for (var i = 0; i < cursor.length; i++)
+        count += cursor[i].count();
+    } else {
+      count = cursor.count();
+    }
+    self.added('counts', name, {count: count});
     if (!options.noReady)
       self.ready();
   }
 
-  if (!options.nonReactive)
-    handle = cursor.observe(observers);
+  if (!options.nonReactive) {
+    if (Array.isArray(cursor)) {
+      var handles = [];
+      for (var i = 0; i < cursor.length; i++)
+        handles.push(cursor[i].observe(observers));
+      handle = {
+        stop: function () {
+          for (var i = 0; i < handles.length; i++)
+            handles[i].stop();
+        }
+      };
+    } else {
+      handle = cursor.observe(observers);
+    }
+  }
 
   if (countFn)
     self.added('counts', name, {count: count});
